@@ -47,6 +47,10 @@ const int MPU_ADDRESS = 0x68;
 const int I2C_SDA_GPIO = 4;
 const int I2C_SCL_GPIO = 5;
 
+const int LED_RED = 14;
+const int LED_GREEN = 15;
+const int LED_BLUE = 16;
+
 static void mpu6050_init()
 {
     i2c_init(i2c_default, 400 * 1000);
@@ -92,6 +96,15 @@ static void gesture_recognize_task(void *p)
     mpu6050_init();
     int16_t accelerometer[3], gyro[3], temp;
 
+    gpio_init(LED_RED);
+    gpio_set_dir(LED_RED, GPIO_OUT);
+
+    gpio_init(LED_GREEN);
+    gpio_set_dir(LED_GREEN, GPIO_OUT);
+
+    gpio_init(LED_BLUE);
+    gpio_set_dir(LED_BLUE, GPIO_OUT);
+
     while (true) {
         //        ei_printf("\nStarting inferencing in 2 seconds...\n");
         //        vTaskDelay(pdMS_TO_TICKS(2000));
@@ -132,11 +145,32 @@ static void gesture_recognize_task(void *p)
             result.timing.classification,
             result.timing.anomaly);
         ei_printf(": \n");
+        
+
+
         for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
             ei_printf(
                 "teste    %s: %.5f\n",
                 result.classification[ix].label,
                 result.classification[ix].value);
+
+            if (result.classification[ix].value > 0.5) {
+                if (result.classification[ix].label == "idle") {
+                    gpio_put(LED_RED, 1);
+                    gpio_put(LED_GREEN, 0);
+                    gpio_put(LED_BLUE, 0);
+                }
+                else if (result.classification[ix].label == "updown") {
+                    gpio_put(LED_RED, 0);
+                    gpio_put(LED_GREEN, 1);
+                    gpio_put(LED_BLUE, 0);
+                }
+                else if (result.classification[ix].label == "wave") {
+                    gpio_put(LED_RED, 0);
+                    gpio_put(LED_GREEN, 0);
+                    gpio_put(LED_BLUE, 1);
+                }
+            }
         }
 
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
